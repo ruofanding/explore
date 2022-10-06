@@ -45,7 +45,7 @@ class Trainer():
         self.broadcast(model)
         model = DDP(model,
                     device_ids=[self.local_rank],
-                    find_unused_parameters=True)
+                    find_unused_parameters=False)
 
         total_step = 0
         self.last_loss = None

@@ -23,6 +23,8 @@ flags.DEFINE_string('data_dir', 'data/movielens_data',
 flags.DEFINE_integer('emb_dim', 8, 'embedding dimension')
 flags.DEFINE_integer('bsz', 512, 'batch size')
 flags.DEFINE_integer('num_epoch', 5, 'num of epoch')
+flags.DEFINE_integer('neg_num', 10,
+                     'number of random sampled negatives for LR.')
 flags.DEFINE_bool('use_bias', False, 'use bias')
 flags.DEFINE_bool('normalize', True, 'use bias')
 flags.DEFINE_bool('sample_correction', False, 'use sampling correction')
@@ -96,7 +98,14 @@ def main(argv):
             important_sampling=FLAGS.important_sampling,
             reweight=FLAGS.reweight)
     elif FLAGS.model == 'LRMF':
-        model = LRMF(FLAGS.emb_dim, 129797, 20709, FLAGS.init_factor)
+        model = LRMF(FLAGS.emb_dim,
+                     129797,
+                     20709,
+                     FLAGS.init_factor,
+                     use_bias=FLAGS.use_bias,
+                     normalize=FLAGS.normalize,
+                     eval_normalize=FLAGS.eval_normalize,
+                     neg_num=FLAGS.neg_num)
     model = model.cuda()
 
     if FLAGS.optimizer == 'SGD':
