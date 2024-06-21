@@ -17,7 +17,7 @@ from absl import flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('model', 'InbatchMF', 'LRMF/InbatchMF')
-flags.DEFINE_string('optimizer', 'SGD', 'SGD/RSMP')
+flags.DEFINE_string('optimizer', 'SGD', 'SGD/RMSP')
 flags.DEFINE_string('data_dir', 'data/movielens_data',
                     'path of data directory')
 flags.DEFINE_integer('emb_dim', 8, 'embedding dimension')
@@ -26,7 +26,7 @@ flags.DEFINE_integer('num_epoch', 5, 'num of epoch')
 flags.DEFINE_integer('neg_num', 10,
                      'number of random sampled negatives for LR.')
 flags.DEFINE_bool('use_bias', False, 'use bias')
-flags.DEFINE_bool('normalize', True, 'use bias')
+flags.DEFINE_bool('normalize', True, 'normalize embedding before dot product')
 flags.DEFINE_bool('sample_correction', False, 'use sampling correction')
 flags.DEFINE_bool('eval_normalize', True, 'eval normalize')
 flags.DEFINE_bool('important_sampling', False, '')
@@ -76,7 +76,7 @@ def main(argv):
     trainer = Trainer(FLAGS.num_epoch, log_freq=1000)
 
     rank = int(os.environ.get('RANK', 0))
-    ds = MovieLensDataset(os.path.join(FLAGS.data_dir, f'train_{rank}.txt'))
+    ds = MovieLensDataset(os.path.join(FLAGS.data_dir, f'train_{rank}.csv'))
     data_loader = torch.utils.data.DataLoader(ds,
                                               num_workers=0,
                                               batch_size=FLAGS.bsz,

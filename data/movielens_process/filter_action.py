@@ -24,7 +24,7 @@ def write_to_output(user_actions, output):
         next_id += 1
 
 
-with open('ml-20m/ratings.csv') as input, open('user_action.csv',
+with open('ml-20m/ratings.csv') as input, open('movielens_data/user_action.csv',
                                                'w') as output:
     for i, line in enumerate(input):
         # skip column name
