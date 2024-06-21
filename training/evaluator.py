@@ -34,10 +34,10 @@ class RecallEvaluator:
         for samples in self.test_data_loader:
             user_id, movie_id, rating = samples
             total_samples += user_id.shape[0]
-            topk_indices, var_mean = model.recall(user_id.cuda(),
+            topk_indices, var_mean = model.recall(user_id.cpu(),
                                                   max(self.topks))
             for i, topk in enumerate(self.topks):
-                target = movie_id.cuda().reshape(-1, 1).repeat(1, topk)
+                target = movie_id.cpu().reshape(-1, 1).repeat(1, topk)
                 recalled_num[i] += torch.sum(
                     torch.eq(target, topk_indices[:, :topk]).int()).cpu()
         torch.distributed.all_reduce(recalled_num)

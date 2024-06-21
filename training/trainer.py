@@ -6,7 +6,7 @@ import torch.optim as optim
 
 class Trainer():
 
-    def __init__(self, epoch, use_cuda=True, log_freq=5000):
+    def __init__(self, epoch, use_cuda=False, log_freq=5000):
         self.total_epoch = epoch
         self.use_cuda = use_cuda
         self.log_freq = log_freq
@@ -33,8 +33,8 @@ class Trainer():
     def setup_distributed(self):
         master_address = os.environ.get('MASTER_ADDR', "127.0.0.1")
         master_port = int(os.environ.get('MASTER_PORT', 34171))
-        torch.cuda.set_device(self.local_rank)
-        torch.distributed.init_process_group(backend='nccl',
+        # torch.cuda.set_device(self.local_rank) #gloo for cpu
+        torch.distributed.init_process_group(backend='gloo',
                                              init_method='tcp://{}:{}'.format(
                                                  master_address, master_port),
                                              world_size=self.world_size,
@@ -44,7 +44,7 @@ class Trainer():
     def fit(self, model, optimizer, train_loader, evaluator=None):
         self.broadcast(model)
         model = DDP(model,
-                    device_ids=[self.local_rank],
+                    # device_ids=[self.local_rank],
                     find_unused_parameters=False)
 
         total_step = 0

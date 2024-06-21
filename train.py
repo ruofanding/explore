@@ -8,7 +8,7 @@ import os
 from training.trainer import Trainer
 from training.evaluator import RecallEvaluator
 from data.dataset.movielens_dataset import MovieLensDataset
-from model.matrix_factorization import InbatchMF, LRMF
+from model.matrix_factorization import InbatchMF, LRMF, DeepLRMF
 import torch.optim as optim
 
 from absl import app
@@ -16,9 +16,9 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('model', 'InbatchMF', 'LRMF/InbatchMF')
+flags.DEFINE_string('model', 'InbatchMF', 'LRMF/InbatchMF/DeepLMRF')
 flags.DEFINE_string('optimizer', 'SGD', 'SGD/RSMP')
-flags.DEFINE_string('data_dir', 'data/movielens_data',
+flags.DEFINE_string('data_dir', 'data/',
                     'path of data directory')
 flags.DEFINE_integer('emb_dim', 8, 'embedding dimension')
 flags.DEFINE_integer('bsz', 512, 'batch size')
@@ -73,10 +73,10 @@ class ResultLogger():
 
 
 def main(argv):
-    trainer = Trainer(FLAGS.num_epoch, log_freq=1000)
+    trainer = Trainer(FLAGS.num_epoch,False, log_freq=1000)
 
     rank = int(os.environ.get('RANK', 0))
-    ds = MovieLensDataset(os.path.join(FLAGS.data_dir, f'train_{rank}.txt'))
+    ds = MovieLensDataset(os.path.join(FLAGS.data_dir, 'train.csv' if rank == 0 else f'train_{rank}.txt'))
     data_loader = torch.utils.data.DataLoader(ds,
                                               num_workers=0,
                                               batch_size=FLAGS.bsz,
@@ -106,7 +106,16 @@ def main(argv):
                      normalize=FLAGS.normalize,
                      eval_normalize=FLAGS.eval_normalize,
                      neg_num=FLAGS.neg_num)
-    model = model.cuda()
+    elif FLAGS.model == 'DeepLMRF':
+        model = DeepLRMF(FLAGS.emb_dim,
+                     129797,
+                     20709,
+                     FLAGS.init_factor,
+                     use_bias=FLAGS.use_bias,
+                     normalize=FLAGS.normalize,
+                     eval_normalize=FLAGS.eval_normalize,
+                     neg_num=FLAGS.neg_num)
+    model = model.cpu()
 
     if FLAGS.optimizer == 'SGD':
         optimizer = optim.SGD(model.parameters(), lr=FLAGS.lr)
