@@ -2,6 +2,12 @@ import random
 import torch
 import torch.nn.functional as F
 
+
+
+#The below function will optimize the gen_movie_embeds
+#expects input of form [user_amt, emb_dim] x [user_amt, gen_vids_per_user, emb_dim]
+# to test a different model, modify the below function and ensure the parameter tables align
+
 def mini_model(model, user_embeddings, gen_movie_embeds):
     #first need to reshape user_embeddings
     u_emb = user_embeddings.unsqueeze(axis = 1)

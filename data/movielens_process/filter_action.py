@@ -4,6 +4,7 @@ user_actions = []
 user_cnt = 0
 action_cnt = 0
 movie_id_map = {}
+import pickle
 
 
 def write_to_output(user_actions, output):
@@ -48,3 +49,6 @@ with open('ml-20m/ratings.csv') as input, open('user_action.csv',
     write_to_output(user_actions, output)
     print('total user:{}, total action:{}, total_movie:{}'.format(
         user_cnt, action_cnt, len(movie_id_map)))
+
+with open("movie_map_store", "wb") as f:
+    pickle.dump(movie_id_map, f)

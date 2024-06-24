@@ -7,8 +7,9 @@ import torch
 import os
 from training.trainer import Trainer
 from training.evaluator import RecallEvaluator
-from data.dataset.movielens_dataset import MovieLensDataset
-from model.matrix_factorization import InbatchMF, LRMF, DeepLRMF
+from data.dataset.movielens_dataset import MovieLensDataset, MovieLensDatasetGenre
+from model.matrix_factorization import InbatchMF, LRMF, DeepLRMF, DeepLRMFGenre
+from gv.generative_video import GVRecall
 import torch.optim as optim
 
 from absl import app
@@ -16,7 +17,7 @@ from absl import flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('model', 'InbatchMF', 'LRMF/InbatchMF/DeepLMRF')
+flags.DEFINE_string('model', 'InbatchMF', 'LRMF/InbatchMF/DeepLRMF')
 flags.DEFINE_string('optimizer', 'SGD', 'SGD/RSMP')
 flags.DEFINE_string('data_dir', 'data/',
                     'path of data directory')
@@ -36,7 +37,7 @@ flags.DEFINE_float('init_factor', 1 / 64.0, 'init factor')
 flags.DEFINE_float('tmp', 0.04, 'temperature')
 flags.DEFINE_float('weight_decay', 0.0, 'weight decay')
 flags.DEFINE_float('sample_correction_weight', 1.0, '')
-
+flags.DEFINE_bool('with_genre', False, 'use genre embeddings')
 
 class ResultLogger():
 
@@ -76,7 +77,11 @@ def main(argv):
     trainer = Trainer(FLAGS.num_epoch,False, log_freq=1000)
 
     rank = int(os.environ.get('RANK', 0))
-    ds = MovieLensDataset(os.path.join(FLAGS.data_dir, 'train.csv' if rank == 0 else f'train_{rank}.txt'))
+    if not FLAGS.with_genre:
+        ds = MovieLensDataset(os.path.join(FLAGS.data_dir, 'train.csv' if rank == 0 else f'train_{rank}.txt'))
+    else:
+        ds = MovieLensDatasetGenre(os.path.join(FLAGS.data_dir, 'train.csv' if rank == 0 else f'train_{rank}.txt'))
+
     data_loader = torch.utils.data.DataLoader(ds,
                                               num_workers=0,
                                               batch_size=FLAGS.bsz,
@@ -106,8 +111,17 @@ def main(argv):
                      normalize=FLAGS.normalize,
                      eval_normalize=FLAGS.eval_normalize,
                      neg_num=FLAGS.neg_num)
-    elif FLAGS.model == 'DeepLMRF':
+    elif FLAGS.model == 'DeepLRMF':
         model = DeepLRMF(FLAGS.emb_dim,
+                     129797,
+                     20709,
+                     FLAGS.init_factor,
+                     use_bias=FLAGS.use_bias,
+                     normalize=FLAGS.normalize,
+                     eval_normalize=FLAGS.eval_normalize,
+                     neg_num=FLAGS.neg_num)
+    elif FLAGS.model == 'DeepLRMFGenre':
+        model = DeepLRMFGenre(FLAGS.emb_dim,
                      129797,
                      20709,
                      FLAGS.init_factor,
@@ -129,11 +143,19 @@ def main(argv):
                                  rank,
                                  argv=sys.argv,
                                  evaluator=evaluator)
-    try:
-        trainer.fit(model, optimizer, data_loader, evaluator=evaluator)
+    try: #use flags for model loading
+        model_save_title = "./trained_models/" + str(sys.argv[1:])
+        if os.path.exists(model_save_title):
+            model.load_state_dict(torch.load(model_save_title))
+        else:
+            trainer.fit(model, optimizer, data_loader, evaluator=evaluator)
+            result_logger.write_result()
+            torch.save(model.state_dict(), model_save_title)
+
     except KeyboardInterrupt:
         pass
-    result_logger.write_result()
+    GVRecall(model, data_loader)
+
 
 
 if __name__ == '__main__':

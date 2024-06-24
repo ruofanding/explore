@@ -2,7 +2,7 @@ import os
 import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.optim as optim
-
+from tqdm import tqdm
 
 class Trainer():
 
@@ -53,7 +53,8 @@ class Trainer():
             self.last_epoch = epoch
             running_loss = 0
             steps = 0
-            for batch_idx, samples in enumerate(train_loader):
+            for batch_idx, samples in tqdm(enumerate(train_loader)):
+                # print(f"batch {batch_idx}")
                 optimizer.zero_grad()
 
                 if self.use_cuda:
