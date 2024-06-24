@@ -8,7 +8,7 @@ import os
 from training.trainer import Trainer
 from training.evaluator import RecallEvaluator
 from data.dataset.movielens_dataset import MovieLensDataset, MovieLensDatasetGenre
-from model.matrix_factorization import InbatchMF, LRMF, DeepLRMF, DeepLRMFGenre
+from model.matrix_factorization import InbatchMF, LRMF, DeepLRMF
 from gv.generative_video import GVRecall
 import torch.optim as optim
 
@@ -120,15 +120,15 @@ def main(argv):
                      normalize=FLAGS.normalize,
                      eval_normalize=FLAGS.eval_normalize,
                      neg_num=FLAGS.neg_num)
-    elif FLAGS.model == 'DeepLRMFGenre':
-        model = DeepLRMFGenre(FLAGS.emb_dim,
-                     129797,
-                     20709,
-                     FLAGS.init_factor,
-                     use_bias=FLAGS.use_bias,
-                     normalize=FLAGS.normalize,
-                     eval_normalize=FLAGS.eval_normalize,
-                     neg_num=FLAGS.neg_num)
+    # elif FLAGS.model == 'DeepLRMFGenre':
+    #     model = DeepLRMFGenre(FLAGS.emb_dim,
+    #                  129797,
+    #                  20709,
+    #                  FLAGS.init_factor,
+    #                  use_bias=FLAGS.use_bias,
+    #                  normalize=FLAGS.normalize,
+    #                  eval_normalize=FLAGS.eval_normalize,
+    #                  neg_num=FLAGS.neg_num)
     model = model.cpu()
 
     if FLAGS.optimizer == 'SGD':
