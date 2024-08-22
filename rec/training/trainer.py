@@ -6,21 +6,23 @@ import torch.optim as optim
 
 class Trainer():
 
-    def __init__(self, epoch, use_cuda=True, log_freq=5000):
+    def __init__(self, epoch, config, log_freq=5000):
         self.total_epoch = epoch
-        self.use_cuda = use_cuda
+        self.config = config
         self.log_freq = log_freq
-
-        self.world_size = int(os.environ.get('WORLD_SIZE', 1))
         self.rank = int(os.environ.get('RANK', 0))
-        self.local_rank = int(os.environ.get('LOCAL_RANK', 0))
-        self.setup_distributed()
 
-    def __move_cuda(self, data):
+        if self.config.device == 'cuda':
+            self.world_size = int(os.environ.get('WORLD_SIZE', 1))
+            self.local_rank = int(os.environ.get('LOCAL_RANK', 0))
+            self.setup_distributed()
+
+    def __move_to_device(self, data):
+        device = torch.device(self.config.device)
         if isinstance(data, list) or isinstance(data, tuple):
-            data = [d.cuda() for d in data]
+            data = [d.to(device) for d in data]
         else:
-            data = {key: data[key].cuda() for key in data}
+            data = {key: data[key].to(device) for key in data}
         return data
 
     def broadcast(self, model: torch.nn.Module, src=0) -> None:
@@ -42,10 +44,11 @@ class Trainer():
                                              group_name='mtorch')
 
     def fit(self, model, optimizer, train_loader, evaluator=None):
-        self.broadcast(model)
-        model = DDP(model,
-                    device_ids=[self.local_rank],
-                    find_unused_parameters=False)
+        if self.config.device == 'cuda':
+            self.broadcast(model)
+            model = DDP(model,
+                        device_ids=[self.local_rank],
+                        find_unused_parameters=False)
 
         total_step = 0
         self.last_loss = None
@@ -56,8 +59,7 @@ class Trainer():
             for batch_idx, samples in enumerate(train_loader):
                 optimizer.zero_grad()
 
-                if self.use_cuda:
-                    samples = self.__move_cuda(samples)
+                samples = self.__move_to_device(samples)
                 if isinstance(samples, list):
                     loss = model(*samples)
                 else:

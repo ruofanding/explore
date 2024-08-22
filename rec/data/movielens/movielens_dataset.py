@@ -22,3 +22,13 @@ class MovieLensDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return self.examples[idx]
+    
+def MovieLenseCollateFn(batch):
+    transposed = zip(*batch)
+    result = []
+    for samples in transposed:
+        if isinstance(samples[0], int):
+            result.append(torch.tensor(samples, dtype=torch.long))
+        elif isinstance(samples[0], float):
+            result.append(torch.tensor(samples, dtype=torch.float32))
+    return result

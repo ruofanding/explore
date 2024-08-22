@@ -7,7 +7,7 @@ import torch
 import os
 from training.trainer import Trainer
 from training.evaluator import RecallEvaluator
-from data.dataset.movielens_dataset import MovieLensDataset
+from data.movielens.movielens_dataset import MovieLensDataset, MovieLenseCollateFn
 from model.matrix_factorization import InbatchMF, LRMF
 import torch.optim as optim
 
@@ -18,11 +18,12 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('model', 'InbatchMF', 'LRMF/InbatchMF')
 flags.DEFINE_string('optimizer', 'SGD', 'SGD/RMSP')
-flags.DEFINE_string('data_dir', 'data/movielens_data',
+flags.DEFINE_string('device', 'mps', 'cpu/cuda/mps')
+flags.DEFINE_string('data_dir', 'data/movielens',
                     'path of data directory')
 flags.DEFINE_integer('emb_dim', 8, 'embedding dimension')
 flags.DEFINE_integer('bsz', 512, 'batch size')
-flags.DEFINE_integer('num_epoch', 5, 'num of epoch')
+flags.DEFINE_integer('num_epoch', 1, 'num of epoch')
 flags.DEFINE_integer('neg_num', 10,
                      'number of random sampled negatives for LR.')
 flags.DEFINE_bool('use_bias', False, 'use bias')
@@ -80,7 +81,8 @@ def main(argv):
     data_loader = torch.utils.data.DataLoader(ds,
                                               num_workers=0,
                                               batch_size=FLAGS.bsz,
-                                              shuffle=True)
+                                              shuffle=True,
+                                              collate_fn=MovieLenseCollateFn)
 
     if FLAGS.model == 'InbatchMF':
         model = InbatchMF(
@@ -106,7 +108,11 @@ def main(argv):
                      normalize=FLAGS.normalize,
                      eval_normalize=FLAGS.eval_normalize,
                      neg_num=FLAGS.neg_num)
-    model = model.cuda()
+    if FLAGS.device == 'cuda':
+        model = model.cuda()
+    elif FLAGS.device == 'mps':
+        device = torch.device('mps')
+        model = model.to(device)
 
     if FLAGS.optimizer == 'SGD':
         optimizer = optim.SGD(model.parameters(), lr=FLAGS.lr)
@@ -114,7 +120,8 @@ def main(argv):
         optimizer = optim.RMSprop(model.parameters(),
                                   lr=FLAGS.lr,
                                   weight_decay=FLAGS.weight_decay)
-    evaluator = RecallEvaluator(os.path.join(FLAGS.data_dir, 'test.csv'))
+    evaluator = RecallEvaluator(os.path.join(
+        FLAGS.data_dir, 'test.csv'), FLAGS)
     result_logger = ResultLogger(trainer,
                                  'result.txt',
                                  rank,

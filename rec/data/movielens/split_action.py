@@ -5,10 +5,10 @@ from absl import app
 from absl import flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('num_shards', 4, 'number of shards')
+flags.DEFINE_integer('num_shards', 1, 'number of shards')
 
 def main(argv):
-    with open('movielens_data/user_action.csv') as input:
+    with open('user_action.csv') as input:
         current_id = 0
         user_actions = []
         train_actions = []
@@ -32,16 +32,13 @@ def main(argv):
     shuffle(train_actions)
     shuffle(test_actions)
 
-    if FLAGS.num_shards <= 1:
-        with open('movielens_data/train.csv', 'w') as train_output:
-            train_output.writelines(train_actions)
-    else:
-        lines_per_shard = len(train_actions) // 4
-        for i in range(FLAGS.num_shards):
-            with open('movielens_data/train_{}.csv'.format(i), 'w') as train_output:
-                train_output.writelines(train_actions[lines_per_shard*i: min(lines_per_shard*(i+1), len(train_actions))])
 
-    with open('movielens_data/test.csv',
+    lines_per_shard = len(train_actions) // FLAGS.num_shards
+    for i in range(FLAGS.num_shards):
+        with open('train_{}.csv'.format(i), 'w') as train_output:
+            train_output.writelines(train_actions[lines_per_shard*i: min(lines_per_shard*(i+1), len(train_actions))])
+
+    with open('test.csv',
                                                     'w') as test_output:
         test_output.writelines(test_actions)
 
